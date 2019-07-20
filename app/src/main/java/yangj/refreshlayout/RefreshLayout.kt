@@ -2,99 +2,68 @@ package yangj.refreshlayout
 
 import android.content.Context
 import android.support.v4.view.NestedScrollingParent
-import android.support.v4.view.NestedScrollingParentHelper
+import android.support.v4.view.ViewCompat
 import android.util.AttributeSet
+import android.util.Log
 import android.view.LayoutInflater
+import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Scroller
+import kotlin.math.abs
 
 /**
- * 正常状态
- */
-private const val STATUS_NORMAL = 0
-/**
- * 下拉状态
- */
-private const val STATUS_DROP_DOWN = 1
-/**
- * 下拉刷新状态
- */
-private const val STATUS_REFRESH = 2
-/**
- * 上拉状态
- */
-private const val STATUS_PULL_UP = 3
-/**
- * 上拉刷新状态
- */
-private const val STATUS_LOADMORE = 4
-
-/**
- * Created by YangJ on 2018/12/1.
+ * @author YangJ
  */
 class RefreshLayout : ViewGroup, NestedScrollingParent {
 
-    /**
-     * 头部控件布局id
-     */
-    private var mHeaderViewId = 0
-    /**
-     * 头部控件
-     */
+    companion object {
+        // 正常状态
+        private const val STATE_NORMAL = 0
+        // 下拉刷新状态
+        private const val STATE_HEADER = 1
+        // 上拉加载状态
+        private const val STATE_FOOTER = 2
+        // TAG
+        private const val TAG = "RefreshLayout"
+    }
+
+    private var mHeaderViewId: Int = 0
+    private var mFooterViewId: Int = 0
+    // 下拉刷新布局
     private lateinit var mHeaderView: View
-    /**
-     * 头部控件高度
-     */
+    // 下拉刷新布局高度
     private var mHeaderViewHeight = 0
-    /**
-     * 尾部控件布局id
-     */
-    private var mFooterViewId = 0
-    /**
-     * 尾部控件
-     */
-    private lateinit var mFooterView: View
-    /**
-     * 尾部控件高度
-     */
-    private var mFooterViewHeight = 0
-    /**
-     * 内容控件
-     */
+    // 内容控件布局
     private lateinit var mContentView: View
-    /**
-     * 内容控件高度
-     */
+    // 内容控件布局高度
     private var mContentViewHeight = 0
-
-    private var mDownY = 0f
-    private var mLayoutStatus = STATUS_NORMAL
-    private lateinit var mNestedScrollingParentHelper: NestedScrollingParentHelper
+    // 上拉加载布局
+    private lateinit var mFooterView: View
+    // 上拉加载布局高度
+    private var mFooterViewHeight = 0
+    // 滑动控制器
     private lateinit var mScroller: Scroller
+    // 刷新状态
+    private var mState = STATE_NORMAL
+    // 下拉刷新、上拉加载事件监听
+    private var mListener: OnRefreshListener? = null
 
-    constructor(context: Context?) : super(context) {
-        initialize(context, null)
-    }
+    constructor(context: Context?) : this(context, null)
 
-    constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs) {
-        initialize(context, attrs)
-    }
+    constructor(context: Context?, attrs: AttributeSet?) : this(context, attrs, 0)
 
     constructor(context: Context?, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {
-        initialize(context, attrs)
+        initialize(context, attrs, defStyleAttr)
     }
 
-    private fun initialize(context: Context?, attrs: AttributeSet?) {
-        // 获取布局中设置的header和footer
-        val array = context?.obtainStyledAttributes(attrs, R.styleable.RefreshLayoutStyleable)
-        array?.let {
-            mHeaderViewId = it.getResourceId(R.styleable.RefreshLayoutStyleable_header, 0)
-            mFooterViewId = it.getResourceId(R.styleable.RefreshLayoutStyleable_footer, 0)
-            it.recycle()
+    private fun initialize(context: Context?, attrs: AttributeSet?, defStyleAttr: Int) {
+        val typedArray = context?.obtainStyledAttributes(attrs, R.styleable.RefreshLayout)
+        typedArray?.let { array ->
+            mHeaderViewId = array.getResourceId(R.styleable.RefreshLayout_header, R.layout.view_header)
+            mFooterViewId = array.getResourceId(R.styleable.RefreshLayout_footer, R.layout.view_footer)
+            array.recycle()
         }
-        mNestedScrollingParentHelper = NestedScrollingParentHelper(this)
-        // 初始化Scroller
         mScroller = Scroller(context)
     }
 
@@ -104,257 +73,227 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
         if (childCount > 1) {
             throw IllegalStateException("RefreshLayout can only have one child")
         }
-        // 对内容控件对象赋值
+        // 获取内容控件
         mContentView = getChildAt(0)
-        // 添加header和footer
+        // 将header和footer添加到布局容器
         val inflater = LayoutInflater.from(context)
-        if (mHeaderViewId != 0) {
-            mHeaderView = inflater.inflate(mHeaderViewId, this)
-        }
-        if (mFooterViewId != 0) {
-            mFooterView = inflater.inflate(mFooterViewId, this)
-        }
+        mHeaderView = inflater.inflate(mHeaderViewId, this)
+        mFooterView = inflater.inflate(mFooterViewId, this)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
-        var useHeight = 0
-        // 遍历childView
+        // 遍历子控件并测量它们的高度
         for (i in 0 until childCount) {
             val childView = getChildAt(i)
             val params = childView.layoutParams
-            // 让childView调用自己的onMeasure测量自己的大小
+            val widthPadding = childView.paddingLeft + childView.paddingRight
+            val heightPadding = childView.paddingTop + childView.paddingBottom
             childView.measure(
-                getChildMeasureSpec(
-                    widthMeasureSpec,
-                    childView.paddingLeft + childView.paddingRight, params.width
-                ),
-                getChildMeasureSpec(
-                    heightMeasureSpec,
-                    childView.paddingTop + childView.paddingBottom, params.height
-                )
+                getChildMeasureSpec(widthMeasureSpec, widthPadding, params.width),
+                getChildMeasureSpec(heightMeasureSpec, heightPadding, params.height)
             )
             // 获取测量到的childView高度
-            val childViewHeight = childView.measuredHeight
+            val measuredHeight = childView.measuredHeight
             when (childView.id) {
-                R.id.header -> {
-                    mHeaderViewHeight = childViewHeight
-                }
-                R.id.footer -> {
-                    mFooterViewHeight = childViewHeight
-                }
-                else -> {
-                    mContentViewHeight = childViewHeight
-                }
+                R.id.header -> mHeaderViewHeight = measuredHeight
+                R.id.footer -> mFooterViewHeight = measuredHeight
+                else -> mContentViewHeight = measuredHeight
             }
-            useHeight += childViewHeight
         }
-        // 设置RefreshLayout的宽度和高度
-        setMeasuredDimension(widthMeasureSpec, useHeight)
+        setMeasuredDimension(widthMeasureSpec, mContentViewHeight)
     }
 
     override fun onLayout(changed: Boolean, l: Int, t: Int, r: Int, b: Int) {
-        var useHeight = 0
         for (i in 0 until childCount) {
             val childView = getChildAt(i)
-            val childViewHeight = childView.measuredHeight
+            val measuredHeight = childView.measuredHeight
             when (childView.id) {
-                R.id.header -> {
-                    childView.layout(l, -childViewHeight, r, 0)
-                }
-                R.id.footer -> {
-                    childView.layout(l, mContentViewHeight, r, mContentViewHeight + childViewHeight)
-                    useHeight += childViewHeight
-                }
-                else -> {
-                    childView.layout(l, 0, r, childViewHeight)
-                    useHeight += childViewHeight
-                }
+                R.id.header -> childView.layout(l, -measuredHeight, r, 0)
+                R.id.footer -> childView.layout(l, mContentViewHeight, r, mContentViewHeight + measuredHeight)
+                else -> childView.layout(l, 0, r, measuredHeight)
             }
         }
     }
 
-//    override fun onInterceptTouchEvent(ev: MotionEvent): Boolean {
-//        when (ev.action) {
-//            MotionEvent.ACTION_DOWN -> {
-//                mDownY = ev.y
-//            }
-//            MotionEvent.ACTION_MOVE -> {
-//                val distance = mDownY - ev.y
-//                if (distance > 0) {
-//                    if (!mContentView.canScrollVertically(0)) {
-//                        return true
-//                    }
-//                } else if (distance < 0) {
-//                    if (!mContentView.canScrollVertically(-1)) {
-//                        return true
-//                    }
-//                }
-//            }
-//            MotionEvent.ACTION_UP -> {
-//                return false
-//            }
-//        }
-//        return super.onInterceptTouchEvent(ev)
-//    }
-//
-//    override fun onTouchEvent(event: MotionEvent): Boolean {
-//        when (event.action) {
-//            MotionEvent.ACTION_DOWN -> {
-//                return true
-//            }
-//            MotionEvent.ACTION_MOVE -> {
-//                val distance = mDownY - event.y
-//                if (distance > 0) {
-//                    if (!mContentView.canScrollVertically(0)) {
-//                        if (STATUS_DROP_DOWN != mLayoutStatus) {
-//                            mLayoutStatus = STATUS_DROP_DOWN
-//                        }
-//                        scrollTo(0, distance.toInt())
-//                        return true
-//                    }
-//                } else if (distance < 0) {
-//                    if (!mContentView.canScrollVertically(-1)) {
-//                        if (STATUS_PULL_UP != mLayoutStatus) {
-//                            mLayoutStatus = STATUS_PULL_UP
-//                        }
-//                        scrollTo(0, distance.toInt())
-//                        return true
-//                    }
-//                }
-//            }
-//            MotionEvent.ACTION_UP -> {
-//                mLayoutStatus = STATUS_NORMAL
-//                mScroller.startScroll(0, 0, 0, scrollY)
-//                invalidate()
-//                return true
-//            }
-//        }
-//        return super.onTouchEvent(event)
-//    }
-
-    /**
-     * 询问当前view是否支持嵌套滑动
-     *
-     * @return 返回true表示支持与childView进行嵌套滑动，返回false表示不支持
-     */
-    override fun onStartNestedScroll(child: View, target: View, nestedScrollAxes: Int): Boolean {
-        return true
-    }
-
-    /**
-     * onStartNestedScroll返回true时，该函数会被调用
-     */
-    override fun onNestedScrollAccepted(child: View, target: View, axes: Int) {
-        mNestedScrollingParentHelper.onNestedScrollAccepted(child, target, axes)
-    }
-
-    /**
-     * 停止嵌套滑动
-     */
-    override fun onStopNestedScroll(child: View) {
-        mNestedScrollingParentHelper.onStopNestedScroll(child)
-    }
-
-    /**
-     * 与当前view一起滑动的childView在滑动的过程中会回调该函数，用于告知childView的滑动情况
-     */
-    override fun onNestedScroll(target: View, dxConsumed: Int, dyConsumed: Int, dxUnconsumed: Int, dyUnconsumed: Int) {
-
-    }
-
-    /**
-     * 与当前view一起滑动的childView在准备滑动之前会回调该函数
-     */
-    override fun onNestedPreScroll(target: View, dx: Int, dy: Int, consumed: IntArray) {
-        if (dy < 0) { // 手指向下滑动
-            // 对header进行显示操作
-            val headerScrollY = mHeaderView.scrollY
-            if (Math.abs(headerScrollY) < mHeaderViewHeight && checkCanScrollVerticallyToTop()) {
-                var realY = dy
-                if (Math.abs(dy + headerScrollY) > mHeaderViewHeight) {
-                    realY = -(mHeaderViewHeight + headerScrollY)
-                }
-                scrollBy(0, realY)
-                consumed[1] = realY
-            } else {
-                scrollBy(0, dy)
+    override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
+        // 对ACTION_UP事件进行处理，用于判断是否满足下拉刷新、上拉加载条件以及平滑处理滑动
+        if (MotionEvent.ACTION_UP == ev?.action) {
+            if (scrollY == 0) {
+                return super.dispatchTouchEvent(ev)
             }
-            // 对footer进行隐藏操作
-            val footerScrollY = mFooterView.scrollY
-            if (footerScrollY in 1..mFooterViewHeight) {
-                var realY = dy
-                if (Math.abs(dy) > footerScrollY) {
-                    realY = -footerScrollY
+            var dy = -scrollY
+            // 判断滑动距离是否达到下拉刷新、上拉加载条件
+            if (abs(scrollY) >= mHeaderViewHeight || abs(scrollY) >= mFooterViewHeight) {
+                if (scrollY < 0) { // 手势向下滑动
+                    dy = -(scrollY + mHeaderViewHeight)
+                    // 设置为下拉状态
+                    if (STATE_HEADER == mState) return super.dispatchTouchEvent(ev)
+                    mState = STATE_HEADER
+                    mListener?.onRefresh(this)
+                } else if (scrollY > 0) { // 手势向上滑动
+                    dy = -(scrollY - mFooterViewHeight)
+                    // 设置为上拉状态
+                    if (STATE_FOOTER == mState) return super.dispatchTouchEvent(ev)
+                    mState = STATE_FOOTER
+                    mListener?.onLoader(this)
                 }
-                scrollBy(0, realY)
-                consumed[1] = realY
             }
-        } else if (dy > 0) { // 手指向上滑动
-            // 对header进行隐藏操作
-            val headerScrollY = mHeaderView.scrollY
-            if (mHeaderViewHeight >= Math.abs(headerScrollY) && headerScrollY <= 0) {
-                var realY = dy
-                if (dy > Math.abs(headerScrollY)) {
-                    realY = Math.abs(headerScrollY)
-                }
-                scrollBy(0, realY)
-                consumed[1] = realY
-            }
-            // 对footer进行显示操作
-            val footerScrollY = mFooterView.scrollY
-            if (footerScrollY < mFooterViewHeight && checkCanScrollVerticallyToBottom()) {
-                var realY = dy
-                if (dy + footerScrollY > mFooterViewHeight) {
-                    realY = mFooterViewHeight - footerScrollY
-                }
-                scrollBy(0, realY)
-                consumed[1] = realY
-            }
+            mScroller.startScroll(0, scrollY, 0, dy, 500)
+            invalidate()
         }
-    }
-
-    /**
-     * 与当前view一起滑动的childView在fling状态下会回调该函数
-     */
-    override fun onNestedFling(target: View, velocityX: Float, velocityY: Float, consumed: Boolean): Boolean {
-        println("onNestedFling")
-        return false
-    }
-
-    /**
-     * 与当前view一起滑动的childView在准备fling状态之前会回调该函数
-     */
-    override fun onNestedPreFling(target: View, velocityX: Float, velocityY: Float): Boolean {
-        println("onNestedPreFling")
-        return false
-    }
-
-    /**
-     * 获取嵌套滑动的轴
-     */
-    override fun getNestedScrollAxes(): Int {
-        return mNestedScrollingParentHelper.nestedScrollAxes
+        return super.dispatchTouchEvent(ev)
     }
 
     override fun computeScroll() {
         if (mScroller.computeScrollOffset()) {
-            scrollTo(0, 0)
+            scrollTo(0, mScroller.currY)
             postInvalidate()
         }
+    }
+
+    fun setOnRefreshListener(listener: OnRefreshListener?) {
+        mListener = listener
+    }
+
+    /**
+     * 下拉刷新执行完毕时，需要调用这个方法重置RefreshLayout的状态
+     */
+    fun refreshComplete() {
+        mState = STATE_NORMAL
+        mScroller.startScroll(0, scrollY, 0, -scrollY, 500)
+        invalidate()
+    }
+
+    /**
+     * 上拉加载执行完毕时，需要调用这个方法重置RefreshLayout的状态
+     */
+    fun loaderComplete() {
+        mState = STATE_NORMAL
+        mScroller.startScroll(0, scrollY, 0, -scrollY, 500)
+        invalidate()
+    }
+
+    /**
+     * 下拉刷新、上拉加载事件监听
+     */
+    interface OnRefreshListener {
+        /**
+         * 下拉刷新回调函数
+         */
+        fun onRefresh(target: RefreshLayout)
+
+        /**
+         * 上拉加载回调函数
+         */
+        fun onLoader(target: RefreshLayout)
     }
 
     /**
      * 判断内容控件是否滚动到顶部
      */
-    fun checkCanScrollVerticallyToTop(): Boolean {
+    private fun checkCanScrollVerticallyToTop(): Boolean {
         return !mContentView.canScrollVertically(-1)
     }
 
     /**
      * 判断内容控件是否滚动到底部
      */
-    fun checkCanScrollVerticallyToBottom(): Boolean {
+    private fun checkCanScrollVerticallyToBottom(): Boolean {
         return !mContentView.canScrollVertically(1)
     }
 
+    /**
+     * 子控件通过调用startNestedScroll方法回调父控件的该方法
+     * <p>子控件通过调用父控件的该方法来确定父控件是否接受嵌套滑动信息</p>
+     * @param nestedScrollAxes 参数表示子控件滑动方向
+     * @return 返回true表示父控件接受嵌套滑动信息，返回false表示不接受
+     */
+    override fun onStartNestedScroll(child: View, target: View, nestedScrollAxes: Int): Boolean {
+        Log.i(TAG, "onStartNestedScroll")
+        // 如果控件刷新状态是正常状态，并且子控件滑动方向为纵向，就接受嵌套滑动并返回true；否则不接受嵌套滑动并返回false
+        return STATE_NORMAL == mState && ViewCompat.SCROLL_AXIS_VERTICAL == nestedScrollAxes
+    }
+
+    /**
+     * 如果父控件接受嵌套滑动信息，那么该方法会被调用
+     * <p>该方法可以让父控件针对嵌套滑动做一些前期工作</p>
+     */
+    override fun onNestedScrollAccepted(child: View, target: View, axes: Int) {
+        Log.i(TAG, "onNestedScrollAccepted")
+        super.onNestedScrollAccepted(child, target, axes)
+    }
+
+    /**
+     * 关键方法，用于接收子控件嵌套滑动之前的距离
+     * <p>该方法可以用于父控件优先响应嵌套滑动，消耗部分或全部滑动距离</p>
+     * @param dx 参数为x轴滑动距离
+     * @param dy 参数为y轴滑动距离
+     *
+     */
+    override fun onNestedPreScroll(target: View, dx: Int, dy: Int, consumed: IntArray) {
+        Log.i(TAG, "onNestedPreScroll")
+        if (dy < 0) { // 手指向下滑动
+            if (checkCanScrollVerticallyToTop()) { // 内容控件不可以向下滑动
+                val realY = dy / 2
+                scrollBy(0, realY)
+                consumed[1] = realY
+            } else if (scrollY > 0) { // 向下滑动隐藏footer
+                var realY = dy
+                if (abs(dy) > scrollY) {
+                    realY = -scrollY
+                }
+                scrollBy(0, realY)
+                consumed[1] = realY
+            }
+        } else if (dy > 0) { // 手指向上滑动
+            if (checkCanScrollVerticallyToBottom()) { // 内容控件不可以向上滑动
+                val realY = dy / 2
+                scrollBy(0, realY)
+                consumed[1] = realY
+            } else if (scrollY < 0) { // 向上滑动隐藏header
+                var realY = dy
+                if (realY > abs(scrollY)) {
+                    realY = abs(scrollY)
+                }
+                scrollBy(0, realY)
+                consumed[1] = realY
+            }
+        }
+    }
+
+    /**
+     * 关键方法，用于接收子控件嵌套滑动之后的距离
+     * <p>该方法可以用于父控件选择是否处理剩余的嵌套滑动距离</p>
+     */
+    override fun onNestedScroll(target: View, dxConsumed: Int, dyConsumed: Int, dxUnconsumed: Int, dyUnconsumed: Int) {
+        Log.i(TAG, "onNestedScroll")
+        super.onNestedScroll(target, dxConsumed, dyConsumed, dxUnconsumed, dyUnconsumed)
+    }
+
+    /**
+     * 子控件通过调用stopNestedScroll方法回调父控件的该方法
+     * <p>用来处理一些收尾工作</p>
+     */
+    override fun onStopNestedScroll(child: View) {
+        Log.i(TAG, "onStopNestedScroll")
+        super.onStopNestedScroll(child)
+    }
+
+    /**
+     * 该方法返回嵌套滑动的方向
+     */
+    override fun getNestedScrollAxes(): Int {
+        Log.i(TAG, "getNestedScrollAxes")
+        return super.getNestedScrollAxes()
+    }
+
+    override fun onNestedPreFling(target: View, velocityX: Float, velocityY: Float): Boolean {
+        Log.i(TAG, "onNestedPreFling")
+        return false
+    }
+
+    override fun onNestedFling(target: View, velocityX: Float, velocityY: Float, consumed: Boolean): Boolean {
+        Log.i(TAG, "onNestedFling")
+        return false
+    }
 }
