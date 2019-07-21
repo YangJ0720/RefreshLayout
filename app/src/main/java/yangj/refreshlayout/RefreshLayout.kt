@@ -9,7 +9,12 @@ import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
+import android.widget.LinearLayout
 import android.widget.Scroller
+import yangj.refreshlayout.widget.FooterView
+import yangj.refreshlayout.widget.HeaderView
+import yangj.refreshlayout.widget.SimpleFooterView
+import yangj.refreshlayout.widget.SimpleHeaderView
 import kotlin.math.abs
 
 /**
@@ -31,7 +36,7 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
     private var mHeaderViewId: Int = 0
     private var mFooterViewId: Int = 0
     // 下拉刷新布局
-    private lateinit var mHeaderView: View
+    private lateinit var mHeaderView: HeaderView
     // 下拉刷新布局高度
     private var mHeaderViewHeight = 0
     // 内容控件布局
@@ -39,7 +44,7 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
     // 内容控件布局高度
     private var mContentViewHeight = 0
     // 上拉加载布局
-    private lateinit var mFooterView: View
+    private lateinit var mFooterView: FooterView
     // 上拉加载布局高度
     private var mFooterViewHeight = 0
     // 滑动控制器
@@ -76,9 +81,12 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
         // 获取内容控件
         mContentView = getChildAt(0)
         // 将header和footer添加到布局容器
-        val inflater = LayoutInflater.from(context)
-        mHeaderView = inflater.inflate(mHeaderViewId, this)
-        mFooterView = inflater.inflate(mFooterViewId, this)
+        mHeaderView = SimpleHeaderView(context)
+        mHeaderView.setContentView(mHeaderViewId)
+        addView(mHeaderView)
+        mFooterView = SimpleFooterView(context)
+        mFooterView.setContentView(mFooterViewId)
+        addView(mFooterView)
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -94,9 +102,9 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
             )
             // 获取测量到的childView高度
             val measuredHeight = childView.measuredHeight
-            when (childView.id) {
-                R.id.header -> mHeaderViewHeight = measuredHeight
-                R.id.footer -> mFooterViewHeight = measuredHeight
+            when (childView) {
+                is HeaderView -> mHeaderViewHeight = measuredHeight
+                is FooterView -> mFooterViewHeight = measuredHeight
                 else -> mContentViewHeight = measuredHeight
             }
         }
@@ -107,9 +115,9 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
         for (i in 0 until childCount) {
             val childView = getChildAt(i)
             val measuredHeight = childView.measuredHeight
-            when (childView.id) {
-                R.id.header -> childView.layout(l, -measuredHeight, r, 0)
-                R.id.footer -> childView.layout(l, mContentViewHeight, r, mContentViewHeight + measuredHeight)
+            when (childView) {
+                is HeaderView -> childView.layout(l, -measuredHeight, r, 0)
+                is FooterView -> childView.layout(l, mContentViewHeight, r, mContentViewHeight + measuredHeight)
                 else -> childView.layout(l, 0, r, measuredHeight)
             }
         }
