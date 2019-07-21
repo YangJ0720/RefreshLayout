@@ -4,5 +4,6 @@
     <!-- RefreshLayout -->
     <string name="refresh_header">下拉刷新</string>
     <string name="refresh_footer">上拉加载</string>
+    <string name="loading">正在加载</string>
 
 </resources>

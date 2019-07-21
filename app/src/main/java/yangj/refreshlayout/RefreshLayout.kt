@@ -20,11 +20,11 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
 
     companion object {
         // 正常状态
-        private const val STATE_NORMAL = 0
+        const val STATE_NORMAL = 0
         // 下拉刷新状态
-        private const val STATE_HEADER = 1
+        const val STATE_HEADER = 1
         // 上拉加载状态
-        private const val STATE_FOOTER = 2
+        const val STATE_FOOTER = 2
         // TAG
         private const val TAG = "RefreshLayout"
     }
@@ -119,6 +119,22 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
         }
     }
 
+    private fun onStateByHeaderRefresh(): Boolean {
+        val result = abs(scrollY) >= mHeaderViewHeight * 2
+        if (result) {
+            mHeaderView.setLabel(resources.getString(R.string.loading))
+        }
+        return result
+    }
+
+    private fun onStateByFooterRefresh(): Boolean {
+        val result = scrollY >= mFooterViewHeight * 2
+        if (result) {
+            mFooterView.setLabel(resources.getString(R.string.loading))
+        }
+        return result
+    }
+
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
         // 对ACTION_UP事件进行处理，用于判断是否满足下拉刷新、上拉加载条件以及平滑处理滑动
         if (MotionEvent.ACTION_UP == ev?.action) {
@@ -127,20 +143,18 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
             }
             var dy = -scrollY
             // 判断滑动距离是否达到下拉刷新、上拉加载条件
-            if (abs(scrollY) >= mHeaderViewHeight || abs(scrollY) >= mFooterViewHeight) {
-                if (scrollY < 0) { // 手势向下滑动
-                    dy = -(scrollY + mHeaderViewHeight)
-                    // 设置为下拉状态
-                    if (STATE_HEADER == mState) return super.dispatchTouchEvent(ev)
-                    mState = STATE_HEADER
-                    mListener?.onRefresh(this)
-                } else if (scrollY > 0) { // 手势向上滑动
-                    dy = -(scrollY - mFooterViewHeight)
-                    // 设置为上拉状态
-                    if (STATE_FOOTER == mState) return super.dispatchTouchEvent(ev)
-                    mState = STATE_FOOTER
-                    mListener?.onLoader(this)
-                }
+            if (scrollY < 0 && onStateByHeaderRefresh()) { // 手势向下滑动
+                dy = -(scrollY + mHeaderViewHeight)
+                // 设置为下拉状态
+                if (STATE_HEADER == mState) return super.dispatchTouchEvent(ev)
+                mState = STATE_HEADER
+                mListener?.onRefresh(this)
+            } else if (scrollY > 0 && onStateByFooterRefresh()) { // 手势向上滑动
+                dy = -(scrollY - mFooterViewHeight)
+                // 设置为上拉状态
+                if (STATE_FOOTER == mState) return super.dispatchTouchEvent(ev)
+                mState = STATE_FOOTER
+                mListener?.onLoader(this)
             }
             mScroller.startScroll(0, scrollY, 0, dy, 500)
             invalidate()
@@ -166,6 +180,8 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
         mState = STATE_NORMAL
         mScroller.startScroll(0, scrollY, 0, -scrollY, 500)
         invalidate()
+        //
+        mHeaderView.setRefreshState(mState)
     }
 
     /**
@@ -175,6 +191,8 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
         mState = STATE_NORMAL
         mScroller.startScroll(0, scrollY, 0, -scrollY, 500)
         invalidate()
+        //
+        mFooterView.setRefreshState(mState)
     }
 
     /**
