@@ -56,21 +56,4 @@ public abstract class CommonAdapter<M, V> extends RecyclerView.Adapter<CommonVie
      */
     protected abstract void bindItemViewHolder(V holder, M item);
 
-    /**
-     * 创建footer类型的item
-     *
-     * @param parent
-     * @param viewType
-     * @return
-     */
-    protected abstract CommonViewHolder createFooterViewHolder(ViewGroup parent, int viewType);
-
-    /**
-     * 将数据绑定到footer类型的item
-     *
-     * @param holder
-     * @param visibility
-     */
-    protected abstract void bindFooterViewHolder(CommonViewHolder holder, int visibility);
-
 }

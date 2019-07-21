@@ -5,16 +5,12 @@ import android.support.v4.view.NestedScrollingParent
 import android.support.v4.view.ViewCompat
 import android.util.AttributeSet
 import android.util.Log
-import android.view.LayoutInflater
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
-import android.widget.LinearLayout
 import android.widget.Scroller
 import yangj.refreshlayout.widget.FooterView
 import yangj.refreshlayout.widget.HeaderView
-import yangj.refreshlayout.widget.SimpleFooterView
-import yangj.refreshlayout.widget.SimpleHeaderView
 import kotlin.math.abs
 
 /**
@@ -81,10 +77,10 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
         // 获取内容控件
         mContentView = getChildAt(0)
         // 将header和footer添加到布局容器
-        mHeaderView = SimpleHeaderView(context)
+        mHeaderView = HeaderView(context)
         mHeaderView.setContentView(mHeaderViewId)
         addView(mHeaderView)
-        mFooterView = SimpleFooterView(context)
+        mFooterView = FooterView(context)
         mFooterView.setContentView(mFooterViewId)
         addView(mFooterView)
     }

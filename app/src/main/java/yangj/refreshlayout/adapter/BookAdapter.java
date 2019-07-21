@@ -9,7 +9,6 @@ import yangj.refreshlayout.common.CommonAdapter;
 import yangj.refreshlayout.common.CommonViewHolder;
 import yangj.refreshlayout.viewholder.BookViewHolder;
 
-import java.util.HashSet;
 import java.util.List;
 
 /**
@@ -19,12 +18,10 @@ import java.util.List;
 public class BookAdapter extends CommonAdapter<Book, BookViewHolder> {
 
     private LayoutInflater mInflater;
-    private HashSet<Integer> mHashSet;
 
     public BookAdapter(Context context, List list) {
         super(list);
         mInflater = LayoutInflater.from(context);
-        mHashSet = new HashSet<>();
     }
 
     @Override
@@ -34,18 +31,8 @@ public class BookAdapter extends CommonAdapter<Book, BookViewHolder> {
 
     @Override
     protected void bindItemViewHolder(final BookViewHolder holder, Book item) {
-        holder.mTextView.setText(item.name);
-
-    }
-
-    @Override
-    protected CommonViewHolder createFooterViewHolder(ViewGroup parent, int viewType) {
-        return null;
-    }
-
-    @Override
-    protected void bindFooterViewHolder(CommonViewHolder holder, int visibility) {
-
+        holder.mTvId.setText(String.valueOf(item.id));
+        holder.mTvName.setText(item.name);
     }
 
 }

@@ -10,11 +10,13 @@ import yangj.refreshlayout.common.CommonViewHolder;
  */
 public class BookViewHolder extends CommonViewHolder {
 
-    public TextView mTextView;
+    public TextView mTvId;
+    public TextView mTvName;
 
     public BookViewHolder(View view) {
         super(view);
-        mTextView = getView(R.id.textView);
+        mTvId = getView(R.id.tvId);
+        mTvName = getView(R.id.tvName);
     }
 
 }

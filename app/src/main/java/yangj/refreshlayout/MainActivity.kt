@@ -40,6 +40,12 @@ class MainActivity : AppCompatActivity() {
             override fun onRefresh(target: RefreshLayout) {
                 Toast.makeText(this@MainActivity, R.string.refresh_header, Toast.LENGTH_SHORT).show()
                 Handler().postDelayed({
+                    // 在数组最开始的位置添加一条数据
+                    val position = 0
+                    val currentTimeMillis = System.currentTimeMillis()
+                    mList.add(position, Book(currentTimeMillis, "下拉: $currentTimeMillis"))
+                    mAdapter.notifyItemInserted(position)
+                    // 下拉刷新执行完毕
                     target.refreshComplete()
                 }, 5000)
             }
@@ -47,6 +53,12 @@ class MainActivity : AppCompatActivity() {
             override fun onLoader(target: RefreshLayout) {
                 Toast.makeText(this@MainActivity, R.string.refresh_footer, Toast.LENGTH_SHORT).show()
                 Handler().postDelayed({
+                    // 在数组最末尾的位置添加一条数据
+                    val size = mList.size
+                    val currentTimeMillis = System.currentTimeMillis()
+                    mList.add(Book(currentTimeMillis, "上拉: $currentTimeMillis"))
+                    mAdapter.notifyItemInserted(size)
+                    // 上拉加载执行完毕
                     target.loaderComplete()
                 }, 5000)
             }
