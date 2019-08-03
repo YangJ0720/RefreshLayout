@@ -35,9 +35,9 @@ open class FooterView : LinearLayout {
      */
     fun setRefreshState(state: Int) {
         when (state) {
-            RefreshLayout.STATE_NORMAL -> {
-                setLabel(resources.getString(R.string.refresh_footer))
-            }
+            RefreshLayout.STATE_NORMAL -> setLabel(resources.getString(R.string.refresh_footer))
+            RefreshLayout.STATE_FOOTER -> setLabel(resources.getString(R.string.loading))
+            RefreshLayout.STATE_PENDING -> setLabel(resources.getString(R.string.pending))
         }
     }
 

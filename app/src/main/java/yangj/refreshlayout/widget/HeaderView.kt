@@ -36,9 +36,9 @@ open class HeaderView : LinearLayout {
      */
     fun setRefreshState(state: Int) {
         when(state) {
-            RefreshLayout.STATE_NORMAL -> {
-                setLabel(resources.getString(R.string.refresh_header))
-            }
+            RefreshLayout.STATE_NORMAL -> setLabel(resources.getString(R.string.refresh_header))
+            RefreshLayout.STATE_HEADER -> setLabel(resources.getString(R.string.loading))
+            RefreshLayout.STATE_PENDING -> setLabel(resources.getString(R.string.pending))
         }
     }
 

@@ -25,6 +25,8 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
         const val STATE_HEADER = 1
         // 上拉加载状态
         const val STATE_FOOTER = 2
+        // 就绪状态，当手指上下拖拽距离满足下拉刷新、上拉加载的达成距离时，可以使用该状态值
+        const val STATE_PENDING = 4
         // TAG
         private const val TAG = "RefreshLayout"
     }
@@ -32,7 +34,7 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
     private var mHeaderViewId: Int = 0
     private var mFooterViewId: Int = 0
     // 下拉刷新布局
-    private lateinit var mHeaderView: HeaderView
+    private var mHeaderView: HeaderView? = null
     // 下拉刷新布局高度
     private var mHeaderViewHeight = 0
     // 内容控件布局
@@ -40,7 +42,7 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
     // 内容控件布局高度
     private var mContentViewHeight = 0
     // 上拉加载布局
-    private lateinit var mFooterView: FooterView
+    private var mFooterView: FooterView? = null
     // 上拉加载布局高度
     private var mFooterViewHeight = 0
     // 滑动控制器
@@ -61,8 +63,8 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
     private fun initialize(context: Context?, attrs: AttributeSet?, defStyleAttr: Int) {
         val typedArray = context?.obtainStyledAttributes(attrs, R.styleable.RefreshLayout)
         typedArray?.let { array ->
-            mHeaderViewId = array.getResourceId(R.styleable.RefreshLayout_header, R.layout.view_header)
-            mFooterViewId = array.getResourceId(R.styleable.RefreshLayout_footer, R.layout.view_footer)
+            mHeaderViewId = array.getResourceId(R.styleable.RefreshLayout_header, 0)
+            mFooterViewId = array.getResourceId(R.styleable.RefreshLayout_footer, 0)
             array.recycle()
         }
         mScroller = Scroller(context)
@@ -77,12 +79,16 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
         // 获取内容控件
         mContentView = getChildAt(0)
         // 将header和footer添加到布局容器
-        mHeaderView = HeaderView(context)
-        mHeaderView.setContentView(mHeaderViewId)
-        addView(mHeaderView)
-        mFooterView = FooterView(context)
-        mFooterView.setContentView(mFooterViewId)
-        addView(mFooterView)
+        if (mHeaderViewId != 0) {
+            mHeaderView = HeaderView(context)
+            mHeaderView!!.setContentView(mHeaderViewId)
+            addView(mHeaderView)
+        }
+        if (mFooterViewId != 0) {
+            mFooterView = FooterView(context)
+            mFooterView!!.setContentView(mFooterViewId)
+            addView(mFooterView)
+        }
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
@@ -119,41 +125,41 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
         }
     }
 
+    /**
+     * 下拉刷新达成条件，这里定义为下拉距离大于等于header高度的2倍
+     */
     private fun onStateByHeaderRefresh(): Boolean {
-        val result = abs(scrollY) >= mHeaderViewHeight * 2
-        if (result) {
-            mHeaderView.setLabel(resources.getString(R.string.loading))
-        }
-        return result
+        return abs(scrollY) >= mHeaderViewHeight * 2
     }
 
+    /**
+     * 上拉加载达成条件，这里定义为上拉距离大于等于footer高度的2倍
+     */
     private fun onStateByFooterRefresh(): Boolean {
-        val result = scrollY >= mFooterViewHeight * 2
-        if (result) {
-            mFooterView.setLabel(resources.getString(R.string.loading))
-        }
-        return result
+        return scrollY >= mFooterViewHeight * 2
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
         // 对ACTION_UP事件进行处理，用于判断是否满足下拉刷新、上拉加载条件以及平滑处理滑动
         if (MotionEvent.ACTION_UP == ev?.action) {
-            if (scrollY == 0) {
+            if (scrollY == 0 || STATE_NORMAL != mState) {
                 return super.dispatchTouchEvent(ev)
             }
             var dy = -scrollY
             // 判断滑动距离是否达到下拉刷新、上拉加载条件
-            if (scrollY < 0 && onStateByHeaderRefresh()) { // 手势向下滑动
+            if (scrollY < 0 && onStateByHeaderRefresh() && hasHeaderView()) { // 手势向下滑动
                 dy = -(scrollY + mHeaderViewHeight)
                 // 设置为下拉状态
                 if (STATE_HEADER == mState) return super.dispatchTouchEvent(ev)
                 mState = STATE_HEADER
+                mHeaderView!!.setRefreshState(mState)
                 mListener?.onRefresh(this)
-            } else if (scrollY > 0 && onStateByFooterRefresh()) { // 手势向上滑动
+            } else if (scrollY > 0 && onStateByFooterRefresh() && hasFooterView()) { // 手势向上滑动
                 dy = -(scrollY - mFooterViewHeight)
                 // 设置为上拉状态
                 if (STATE_FOOTER == mState) return super.dispatchTouchEvent(ev)
                 mState = STATE_FOOTER
+                mFooterView!!.setRefreshState(mState)
                 mListener?.onLoader(this)
             }
             mScroller.startScroll(0, scrollY, 0, dy, 500)
@@ -174,6 +180,20 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
     }
 
     /**
+     * 是否设置可以下拉刷新
+     */
+    private fun hasHeaderView(): Boolean {
+        return mHeaderView != null
+    }
+
+    /**
+     * 是否设置可以上拉加载
+     */
+    private fun hasFooterView(): Boolean {
+        return mFooterView != null
+    }
+
+    /**
      * 下拉刷新执行完毕时，需要调用这个方法重置RefreshLayout的状态
      */
     fun refreshComplete() {
@@ -181,7 +201,7 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
         mScroller.startScroll(0, scrollY, 0, -scrollY, 500)
         invalidate()
         //
-        mHeaderView.setRefreshState(mState)
+        mHeaderView!!.setRefreshState(mState)
     }
 
     /**
@@ -192,7 +212,7 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
         mScroller.startScroll(0, scrollY, 0, -scrollY, 500)
         invalidate()
         //
-        mFooterView.setRefreshState(mState)
+        mFooterView!!.setRefreshState(mState)
     }
 
     /**
@@ -255,11 +275,21 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
     override fun onNestedPreScroll(target: View, dx: Int, dy: Int, consumed: IntArray) {
         Log.i(TAG, "onNestedPreScroll")
         if (dy < 0) { // 手指向下滑动
-            if (checkCanScrollVerticallyToTop()) { // 内容控件不可以向下滑动
+            if (hasHeaderView() && checkCanScrollVerticallyToTop()) { // 内容控件不可以向下滑动
+                // 如果满足下拉刷新达成条件，修改header文本内容为松开刷新
+                if (onStateByHeaderRefresh()) {
+                    mHeaderView!!.setRefreshState(STATE_PENDING)
+                }
+                // 设置RefreshLayout嵌套滑动
                 val realY = dy / 2
                 scrollBy(0, realY)
                 consumed[1] = realY
             } else if (scrollY > 0) { // 向下滑动隐藏footer
+                // 如果不满足上拉加载达成条件，修改footer文本内容为上拉加载
+                if (hasFooterView() && !onStateByFooterRefresh()) {
+                    mFooterView!!.setRefreshState(STATE_NORMAL)
+                }
+                // 设置RefreshLayout嵌套滑动
                 var realY = dy
                 if (abs(dy) > scrollY) {
                     realY = -scrollY
@@ -268,11 +298,21 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
                 consumed[1] = realY
             }
         } else if (dy > 0) { // 手指向上滑动
-            if (checkCanScrollVerticallyToBottom()) { // 内容控件不可以向上滑动
+            if (hasFooterView() && checkCanScrollVerticallyToBottom()) { // 内容控件不可以向上滑动
+                // 如果满足上拉加载达成条件，修改footer文本内容为松开刷新
+                if (onStateByFooterRefresh()) {
+                    mFooterView!!.setRefreshState(STATE_PENDING)
+                }
+                // 设置RefreshLayout嵌套滑动
                 val realY = dy / 2
                 scrollBy(0, realY)
                 consumed[1] = realY
             } else if (scrollY < 0) { // 向上滑动隐藏header
+                // 如果不满足下拉刷新达成条件，修改header文本内容为下拉刷新
+                if (hasHeaderView() && !onStateByHeaderRefresh()) {
+                    mHeaderView!!.setRefreshState(STATE_NORMAL)
+                }
+                // 设置RefreshLayout嵌套滑动
                 var realY = dy
                 if (realY > abs(scrollY)) {
                     realY = abs(scrollY)

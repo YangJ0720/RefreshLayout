@@ -38,7 +38,6 @@ class MainActivity : AppCompatActivity() {
         // 初始化RefreshLayout
         refreshLayout.setOnRefreshListener(object :RefreshLayout.OnRefreshListener{
             override fun onRefresh(target: RefreshLayout) {
-                Toast.makeText(this@MainActivity, R.string.refresh_header, Toast.LENGTH_SHORT).show()
                 Handler().postDelayed({
                     // 在数组最开始的位置添加一条数据
                     val position = 0
@@ -51,7 +50,6 @@ class MainActivity : AppCompatActivity() {
             }
 
             override fun onLoader(target: RefreshLayout) {
-                Toast.makeText(this@MainActivity, R.string.refresh_footer, Toast.LENGTH_SHORT).show()
                 Handler().postDelayed({
                     // 在数组最末尾的位置添加一条数据
                     val size = mList.size
