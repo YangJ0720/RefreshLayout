@@ -35,8 +35,9 @@ class ScaleHeaderView : HeaderView {
     override fun setRefreshState(state: Int) {
         when(state) {
             RefreshLayout.STATE_NORMAL -> setLabel(R.string.refresh_header)
-            RefreshLayout.STATE_HEADER -> setLabel(R.string.loading)
+            RefreshLayout.STATE_HEADER -> setLabel(R.string.refresh_header)
             RefreshLayout.STATE_PENDING -> setLabel(R.string.pending)
+            RefreshLayout.STATE_LOADING -> setLabel(R.string.loading)
         }
     }
 

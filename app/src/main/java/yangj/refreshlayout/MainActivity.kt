@@ -8,8 +8,8 @@ import android.support.v7.widget.LinearLayoutManager
 import kotlinx.android.synthetic.main.activity_main.*
 import yangj.refreshlayout.adapter.BookAdapter
 import yangj.refreshlayout.bean.Book
-import yangj.refreshlayout.widget.FooterView
-import yangj.refreshlayout.widget.HeaderView
+import yangj.refreshlayout.widget.ScaleFooterView
+import yangj.refreshlayout.widget.ScaleHeaderView
 
 /**
  * @author YangJ
@@ -64,12 +64,10 @@ class MainActivity : AppCompatActivity() {
             }
         })
         // 添加header控件
-        val header = HeaderView(this)
-        header.setContentView(R.layout.view_header)
+        val header = ScaleHeaderView(this)
         refreshLayout.addHeaderView(header)
         // 添加footer控件
-        val footer = FooterView(this)
-        footer.setContentView(R.layout.view_footer)
+        val footer = ScaleFooterView(this)
         refreshLayout.addFooterView(footer)
         // 初始化RecyclerView
         recyclerView.adapter = mAdapter

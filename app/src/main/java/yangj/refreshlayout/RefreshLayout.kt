@@ -28,6 +28,8 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
         const val STATE_FOOTER = 2
         // 就绪状态，当手指上下拖拽距离满足下拉刷新、上拉加载的达成距离时，可以使用该状态值
         const val STATE_PENDING = 4
+        //
+        const val STATE_LOADING = 5
         // 重置header和footer状态至隐藏执行的默认时长
         const val RESET_DURATION = 500
         // 检查向上滚动为负
@@ -174,9 +176,10 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
     override fun dispatchTouchEvent(ev: MotionEvent?): Boolean {
         // 对ACTION_UP事件进行处理，用于判断是否满足下拉刷新、上拉加载条件以及平滑处理滑动
         if (MotionEvent.ACTION_UP == ev?.action) {
-            if (scrollY == 0 || STATE_NORMAL != mState) {
+            if (scrollY == 0 || STATE_LOADING == mState) {
                 return super.dispatchTouchEvent(ev)
             }
+            //
             var dy = -scrollY
             // 判断滑动距离是否达到下拉刷新、上拉加载条件
             if (scrollY < 0 && onStateByHeaderRefresh() && hasHeaderView()) { // 手势向下滑动
@@ -184,20 +187,20 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
                 mHeaderViewHeight = mHeaderViewPendingHeight
                 //
                 dy = -(scrollY + mHeaderViewHeight)
-                // 设置为下拉状态
-                if (STATE_HEADER == mState) return super.dispatchTouchEvent(ev)
-                mState = STATE_HEADER
+                // 设置为正在加载数据状态
+                mState = STATE_LOADING
                 mHeaderView!!.setRefreshState(mState)
+                //
                 mListener?.onRefresh(this)
             } else if (scrollY > 0 && onStateByFooterRefresh() && hasFooterView()) { // 手势向上滑动
                 // 兼容缩放footer高度，需要保存原始高度
                 mFooterViewHeight = mFooterViewPendingHeight
                 //
                 dy = -(scrollY - mFooterViewHeight)
-                // 设置为上拉状态
-                if (STATE_FOOTER == mState) return super.dispatchTouchEvent(ev)
-                mState = STATE_FOOTER
+                // 设置为正在加载数据状态
+                mState = STATE_LOADING
                 mFooterView!!.setRefreshState(mState)
+                //
                 mListener?.onLoader(this)
             }
             mScroller.startScroll(0, scrollY, 0, dy, mResetDuration)
@@ -280,11 +283,18 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
     }
 
     /**
+     * 中断Scroller未完成的动画
+     */
+    private fun abortScrollerAnimation() {
+        if (mScroller.isFinished) return
+        mScroller.abortAnimation()
+    }
+
+    /**
      * 下拉刷新执行完毕时，需要调用这个方法重置RefreshLayout的状态
      */
     fun refreshComplete() {
         mState = STATE_NORMAL
-//        mState = STATE_HEADER
         mScroller.startScroll(0, scrollY, 0, -scrollY, mResetDuration)
         invalidate()
         //
@@ -296,7 +306,6 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
      */
     fun loaderComplete() {
         mState = STATE_NORMAL
-//        mState = STATE_FOOTER
         mScroller.startScroll(0, scrollY, 0, -scrollY, mResetDuration)
         invalidate()
         //
@@ -337,7 +346,7 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
     override fun onStartNestedScroll(child: View, target: View, nestedScrollAxes: Int): Boolean {
         Log.i(TAG, "onStartNestedScroll")
         // 如果控件刷新状态是正常状态，并且子控件滑动方向为纵向，就接受嵌套滑动并返回true；否则不接受嵌套滑动并返回false
-        return STATE_NORMAL == mState && ViewCompat.SCROLL_AXIS_VERTICAL == nestedScrollAxes
+        return (STATE_PENDING != mState && STATE_LOADING != mState) && ViewCompat.SCROLL_AXIS_VERTICAL == nestedScrollAxes
     }
 
     /**
@@ -359,13 +368,12 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
         Log.i(TAG, "onNestedPreScroll")
         if (dy < 0) { // 手指向下滑动
             if (hasHeaderView() && checkCanScrollVerticallyByDirection(SCROLL_DIRECTION_TOP)) { // 内容控件不可以向下滑动
+                // 如果header正在隐藏的时候，手势下拉需要立即中断scroller未完成的动画效果
+                abortScrollerAnimation()
                 // 如果满足下拉刷新达成条件，修改header文本内容为松开刷新
                 if (onStateByHeaderRefresh()) {
-//                    mState = STATE_PENDING
-//                    mHeaderView!!.setRefreshState(mState)
-                    mHeaderView!!.setRefreshState(STATE_PENDING)
-                } else {
-                    // mState = STATE_HEADER
+                    mState = STATE_PENDING
+                    mHeaderView!!.setRefreshState(mState)
                 }
                 // 设置RefreshLayout嵌套滑动
                 val realY = convertToDamping(dy)
@@ -376,9 +384,8 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
             } else if (scrollY > 0) { // 向下滑动隐藏footer
                 // 如果不满足上拉加载达成条件，修改footer文本内容为上拉加载
                 if (hasFooterView() && !onStateByFooterRefresh()) {
-                    mState = STATE_NORMAL
+                    mState = STATE_FOOTER
                     mFooterView!!.setRefreshState(mState)
-//                    mFooterView!!.setRefreshState(STATE_NORMAL)
                 }
                 // 设置RefreshLayout嵌套滑动
                 var realY = dy
@@ -392,11 +399,12 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
             }
         } else if (dy > 0) { // 手指向上滑动
             if (hasFooterView() && checkCanScrollVerticallyByDirection(SCROLL_DIRECTION_BOTTOM)) { // 内容控件不可以向上滑动
+                // 如果footer正在隐藏的时候，手势上拉需要立即中断scroller未完成的动画效果
+                abortScrollerAnimation()
                 // 如果满足上拉加载达成条件，修改footer文本内容为松开刷新
                 if (onStateByFooterRefresh()) {
-//                    mState = STATE_PENDING
-//                    mFooterView!!.setRefreshState(mState)
-                    mFooterView!!.setRefreshState(STATE_PENDING)
+                    mState = STATE_PENDING
+                    mFooterView!!.setRefreshState(mState)
                 } else {
 //                    mState = STATE_FOOTER
                 }
@@ -409,9 +417,8 @@ class RefreshLayout : ViewGroup, NestedScrollingParent {
             } else if (scrollY < 0) { // 向上滑动隐藏header
                 // 如果不满足下拉刷新达成条件，修改header文本内容为下拉刷新
                 if (hasHeaderView() && !onStateByHeaderRefresh()) {
-                    mState = STATE_NORMAL
+                    mState = STATE_HEADER
                     mHeaderView!!.setRefreshState(mState)
-//                    mHeaderView!!.setRefreshState(STATE_NORMAL)
                 }
                 // 设置RefreshLayout嵌套滑动
                 var realY = dy

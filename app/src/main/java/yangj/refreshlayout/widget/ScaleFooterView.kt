@@ -31,8 +31,9 @@ class ScaleFooterView : FooterView {
     override fun setRefreshState(state: Int) {
         when (state) {
             RefreshLayout.STATE_NORMAL -> mTextView.setText(R.string.refresh_footer)
-            RefreshLayout.STATE_FOOTER -> mTextView.setText(R.string.loading)
+            RefreshLayout.STATE_FOOTER -> mTextView.setText(R.string.refresh_footer)
             RefreshLayout.STATE_PENDING -> mTextView.setText(R.string.pending)
+            RefreshLayout.STATE_LOADING -> mTextView.setText(R.string.loading)
         }
     }
 

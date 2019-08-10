@@ -42,8 +42,9 @@ open class FooterView : FrameLayout, Special {
     override fun setRefreshState(state: Int) {
         when (state) {
             RefreshLayout.STATE_NORMAL -> setLabel(resources.getString(R.string.refresh_footer))
-            RefreshLayout.STATE_FOOTER -> setLabel(resources.getString(R.string.loading))
+            RefreshLayout.STATE_FOOTER -> setLabel(resources.getString(R.string.refresh_footer))
             RefreshLayout.STATE_PENDING -> setLabel(resources.getString(R.string.pending))
+            RefreshLayout.STATE_LOADING -> setLabel(resources.getString(R.string.loading))
         }
     }
 

@@ -38,10 +38,11 @@ open class HeaderView : FrameLayout, Special {
      * @param state 参数为RefreshLayout刷新状态，例如：下拉刷新、松开刷新、正在加载
      */
     override fun setRefreshState(state: Int) {
-        when(state) {
+        when (state) {
             RefreshLayout.STATE_NORMAL -> setLabel(resources.getString(R.string.refresh_header))
-            RefreshLayout.STATE_HEADER -> setLabel(resources.getString(R.string.loading))
+            RefreshLayout.STATE_HEADER -> setLabel(resources.getString(R.string.refresh_header))
             RefreshLayout.STATE_PENDING -> setLabel(resources.getString(R.string.pending))
+            RefreshLayout.STATE_LOADING -> setLabel(resources.getString(R.string.loading))
         }
     }
 
