@@ -5,6 +5,7 @@
     <declare-styleable name="RefreshLayout">
         <attr name="header" format="reference"/>
         <attr name="footer" format="reference"/>
+        <attr name="reset_duration" format="integer"/>
     </declare-styleable>
 
 </resources>

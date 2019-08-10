@@ -4,7 +4,7 @@ import android.content.Context
 import android.util.AttributeSet
 import android.view.LayoutInflater
 import android.view.View
-import android.widget.LinearLayout
+import android.widget.FrameLayout
 import android.widget.TextView
 import yangj.refreshlayout.R
 import yangj.refreshlayout.RefreshLayout
@@ -12,14 +12,20 @@ import yangj.refreshlayout.RefreshLayout
 /**
  * @author YangJ
  */
-open class FooterView : LinearLayout {
+open class FooterView : FrameLayout, Special {
 
     protected var mView: View? = null
     private var mTvLabel: TextView? = null
 
-    constructor(context: Context?) : super(context)
-    constructor(context: Context?, attrs: AttributeSet?) : super(context, attrs)
-    constructor(context: Context?, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr)
+    constructor(context: Context?) : this(context, null)
+    constructor(context: Context?, attrs: AttributeSet?) : this(context, attrs, 0)
+    constructor(context: Context?, attrs: AttributeSet?, defStyleAttr: Int) : super(context, attrs, defStyleAttr) {
+        initialize()
+    }
+
+    private fun initialize() {
+
+    }
 
     /**
      * 设置头部控件文本内容
@@ -33,12 +39,20 @@ open class FooterView : LinearLayout {
      * 设置刷新状态
      * @param state 参数为RefreshLayout刷新状态，例如：上拉加载、松开刷新、正在加载
      */
-    fun setRefreshState(state: Int) {
+    override fun setRefreshState(state: Int) {
         when (state) {
             RefreshLayout.STATE_NORMAL -> setLabel(resources.getString(R.string.refresh_footer))
             RefreshLayout.STATE_FOOTER -> setLabel(resources.getString(R.string.loading))
             RefreshLayout.STATE_PENDING -> setLabel(resources.getString(R.string.pending))
         }
+    }
+
+    override fun notifyHeaderScrollChanged(distance: Int) {
+
+    }
+
+    override fun notifyFooterScrollChanged(distance: Int) {
+
     }
 
     fun setContentView(layoutResId: Int) {

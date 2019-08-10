@@ -5,10 +5,11 @@ import android.os.Handler
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.DividerItemDecoration
 import android.support.v7.widget.LinearLayoutManager
-import android.widget.Toast
 import kotlinx.android.synthetic.main.activity_main.*
 import yangj.refreshlayout.adapter.BookAdapter
 import yangj.refreshlayout.bean.Book
+import yangj.refreshlayout.widget.FooterView
+import yangj.refreshlayout.widget.HeaderView
 
 /**
  * @author YangJ
@@ -32,11 +33,12 @@ class MainActivity : AppCompatActivity() {
             mList.add(Book(i.toLong(), "第${i}本书"))
         }
         mAdapter = BookAdapter(this, mList)
+
     }
 
     private fun initView() {
         // 初始化RefreshLayout
-        refreshLayout.setOnRefreshListener(object :RefreshLayout.OnRefreshListener{
+        refreshLayout.setOnRefreshListener(object : RefreshLayout.OnRefreshListener {
             override fun onRefresh(target: RefreshLayout) {
                 Handler().postDelayed({
                     // 在数组最开始的位置添加一条数据
@@ -60,8 +62,15 @@ class MainActivity : AppCompatActivity() {
                     target.loaderComplete()
                 }, 5000)
             }
-
         })
+        // 添加header控件
+        val header = HeaderView(this)
+        header.setContentView(R.layout.view_header)
+        refreshLayout.addHeaderView(header)
+        // 添加footer控件
+        val footer = FooterView(this)
+        footer.setContentView(R.layout.view_footer)
+        refreshLayout.addFooterView(footer)
         // 初始化RecyclerView
         recyclerView.adapter = mAdapter
         recyclerView.layoutManager = LinearLayoutManager(this)
