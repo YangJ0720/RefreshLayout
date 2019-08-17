@@ -1,9 +1,11 @@
 package yangj.refreshlayout.widget
 
+import android.animation.ObjectAnimator
 import android.content.Context
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.widget.ImageView
 import android.widget.TextView
 import yangj.refreshlayout.R
 import yangj.refreshlayout.RefreshLayout
@@ -16,6 +18,9 @@ import kotlin.math.abs
  */
 class ScaleHeaderView : HeaderView {
 
+    private var mState = RefreshLayout.STATE_NORMAL
+
+    private lateinit var mImageView: ImageView
     private lateinit var mTextView: TextView
 
     constructor(context: Context?) : this(context, null)
@@ -33,12 +38,25 @@ class ScaleHeaderView : HeaderView {
     }
 
     override fun setRefreshState(state: Int) {
-        when(state) {
-            RefreshLayout.STATE_NORMAL -> setLabel(R.string.refresh_header)
-            RefreshLayout.STATE_HEADER -> setLabel(R.string.refresh_header)
-            RefreshLayout.STATE_PENDING -> setLabel(R.string.pending)
+        if (mState == state) return
+        // 更改header状态
+        when (state) {
+            RefreshLayout.STATE_NORMAL -> {
+                setLabel(R.string.refresh_header)
+                setRotation(180.0f, 0.0f)
+            }
+            RefreshLayout.STATE_HEADER -> {
+                setLabel(R.string.refresh_header)
+                setRotation(180.0f, 0.0f)
+            }
+            RefreshLayout.STATE_PENDING -> {
+                setLabel(R.string.pending)
+                setRotation(0.0f, 180.0f)
+            }
             RefreshLayout.STATE_LOADING -> setLabel(R.string.loading)
         }
+        // 记录刷新状态
+        mState = state
     }
 
     override fun notifyHeaderScrollChanged(distance: Int) {
@@ -46,7 +64,7 @@ class ScaleHeaderView : HeaderView {
         childView.layoutParams = LayoutParams(
             LayoutParams.MATCH_PARENT, abs(distance), Gravity.CENTER
         )
-        println("notifyHeaderScrollChanged -> distance = $distance")
+        requestLayout()
     }
 
     private fun setContentView() {
@@ -56,6 +74,15 @@ class ScaleHeaderView : HeaderView {
             LayoutParams.MATCH_PARENT,
             LayoutParams.WRAP_CONTENT
         )
+        mImageView = view.findViewById(R.id.imageView)
         mTextView = view.findViewById(R.id.textView)
+    }
+
+    private fun setRotation(start: Float, stop: Float) {
+        val animator = mImageView.animation
+        animator?.cancel()
+        val animatorNew = ObjectAnimator.ofFloat(mImageView, "rotation", start, stop)
+        animatorNew.duration = 200
+        animatorNew.start()
     }
 }

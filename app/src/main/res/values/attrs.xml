@@ -3,8 +3,7 @@
 
     <!-- RefreshLayout -->
     <declare-styleable name="RefreshLayout">
-        <attr name="header" format="reference"/>
-        <attr name="footer" format="reference"/>
+        <!-- RefreshLayout重置为初始状态时长 -->
         <attr name="reset_duration" format="integer"/>
     </declare-styleable>
 

@@ -1,9 +1,11 @@
 package yangj.refreshlayout.widget
 
+import android.animation.ObjectAnimator
 import android.content.Context
 import android.util.AttributeSet
 import android.view.Gravity
 import android.view.LayoutInflater
+import android.widget.ImageView
 import android.widget.TextView
 import yangj.refreshlayout.R
 import yangj.refreshlayout.RefreshLayout
@@ -16,6 +18,9 @@ import kotlin.math.abs
  */
 class ScaleFooterView : FooterView {
 
+    private var mState = RefreshLayout.STATE_NORMAL
+
+    private lateinit var mImageView: ImageView
     private lateinit var mTextView: TextView
 
     constructor(context: Context?) : this(context, null)
@@ -29,12 +34,25 @@ class ScaleFooterView : FooterView {
     }
 
     override fun setRefreshState(state: Int) {
+        if (mState == state) return
+        // 更改footer状态
         when (state) {
-            RefreshLayout.STATE_NORMAL -> mTextView.setText(R.string.refresh_footer)
-            RefreshLayout.STATE_FOOTER -> mTextView.setText(R.string.refresh_footer)
-            RefreshLayout.STATE_PENDING -> mTextView.setText(R.string.pending)
+            RefreshLayout.STATE_NORMAL -> {
+                mTextView.setText(R.string.refresh_footer)
+                setRotation(180.0f, 0.0f)
+            }
+            RefreshLayout.STATE_FOOTER -> {
+                mTextView.setText(R.string.refresh_footer)
+                setRotation(180.0f, 0.0f)
+            }
+            RefreshLayout.STATE_PENDING -> {
+                mTextView.setText(R.string.pending)
+                setRotation(0.0f, 180.0f)
+            }
             RefreshLayout.STATE_LOADING -> mTextView.setText(R.string.loading)
         }
+        // 记录刷新状态
+        mState = state
     }
 
     override fun notifyFooterScrollChanged(distance: Int) {
@@ -51,6 +69,15 @@ class ScaleFooterView : FooterView {
             LayoutParams.MATCH_PARENT,
             LayoutParams.WRAP_CONTENT
         )
+        mImageView = view.findViewById(R.id.imageView)
         mTextView = view.findViewById(R.id.textView)
+    }
+
+    private fun setRotation(start: Float, stop: Float) {
+        val animator = mImageView.animation
+        animator?.cancel()
+        val animatorNew = ObjectAnimator.ofFloat(mImageView, "rotation", start, stop)
+        animatorNew.duration = 200
+        animatorNew.start()
     }
 }

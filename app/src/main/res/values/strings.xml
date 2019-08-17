@@ -1,6 +1,10 @@
 <resources>
     <string name="app_name">RefreshLayout</string>
 
+    <!-- MainActivity -->
+    <string name="mode_default">默认模式</string>
+    <string name="mode_scale">收缩模式</string>
+
     <!-- RefreshLayout -->
     <string name="refresh_header">下拉刷新</string>
     <string name="refresh_footer">上拉加载</string>

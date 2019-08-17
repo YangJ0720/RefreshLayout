@@ -8,8 +8,4 @@ package yangj.refreshlayout.widget
 interface Special {
 
     fun setRefreshState(state: Int)
-
-    fun notifyHeaderScrollChanged(distance: Int)
-
-    fun notifyFooterScrollChanged(distance: Int)
 }
