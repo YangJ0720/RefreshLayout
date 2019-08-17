@@ -33,12 +33,9 @@
 </yangj.refreshlayout.RefreshLayout>
 ```
 ## 属性说明
-|布局属性|说明|
+|属性|说明|
 |----|-----
 |app:reset_duration|重置为初始状态时长
-
-|方法属性|说明|
-|----|-----
 |addHeaderView()|添加header
 |addFooterView()|添加footer
 |refreshComplete()|下拉刷新完成，调用该方法使RefreshLayout恢复正常状态
