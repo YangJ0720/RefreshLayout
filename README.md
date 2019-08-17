@@ -7,7 +7,7 @@
 * 支持NestedScrolling特性
 * Header和Footer支持自定义，目前本工程仅实现两种效果，分别为默认效果和缩放效果
 
-##  APK下载
+## APK下载
 [Download](https://github.com/YangJ0720/RefreshLayout/blob/master/apk/app-debug.apk)
 
 ## XML配置
@@ -45,3 +45,4 @@
 如下图所示：
 
 ![image](https://github.com/YangJ0720/RefreshLayout/blob/master/gif/preview.gif)
+![image](https://github.com/YangJ0720/RefreshLayout/blob/master/gif/scale.gif)

@@ -5,7 +5,6 @@ import android.os.Handler
 import android.support.v7.app.AppCompatActivity
 import android.support.v7.widget.DividerItemDecoration
 import android.support.v7.widget.LinearLayoutManager
-import android.widget.Toast
 import kotlinx.android.synthetic.main.activity_main.*
 import yangj.refreshlayout.adapter.BookAdapter
 import yangj.refreshlayout.bean.Book
