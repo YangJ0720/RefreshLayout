@@ -44,5 +44,5 @@
 ## 效果图
 如下图所示：
 
-![image](https://github.com/YangJ0720/RefreshLayout/blob/master/gif/preview.gif)
+![image](https://github.com/YangJ0720/RefreshLayout/blob/master/gif/default.gif)
 ![image](https://github.com/YangJ0720/RefreshLayout/blob/master/gif/scale.gif)
